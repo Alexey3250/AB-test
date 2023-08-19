@@ -24,8 +24,8 @@ def get_model_path(model_name: str) -> str:
     else:
         # Это ваш локальный путь к моделям
         paths = {
-            "test": "C:/Users/Alex/AB-test/final_with_DL/model_A.cbm",
-            "control": "C:/Users/Alex/AB-test/final_with_DL/model_B.cbm"
+            "test": "C:/Users/Alex/AB-test/final_with_DL/model_test.cbm",
+            "control": "C:/Users/Alex/AB-test/final_with_DL/model_control.cbm"
         }
         return paths[model_name]
 
@@ -173,18 +173,24 @@ class PostGet(BaseModel):
     id: int
     text: str
     topic: str
-
+    
     class Config:
         orm_mode = True
+
+class Response(BaseModel):
+    exp_group: str
+    recommendations: List[PostGet]
 
 
 app = FastAPI()
 
-@app.get("/post/recommendations/", response_model=List[PostGet])
+@app.get("/post/recommendations/", response_model=Response)
 def recommended_posts(
         id: int,
         time: datetime,
-        limit: int = 5) -> List[PostGet]:
+        limit: int = 5
+) -> Response:
+ 
     
     # Определяем группу A/B-тестирования для данного пользователя
     exp_group = get_exp_group(id)
@@ -208,4 +214,6 @@ def recommended_posts(
             posts.append(PostGet(**rec))
         except pydantic.error_wrappers.ValidationError as e:
             print(f"Validation error for record {rec}: {e}")
-    return posts
+            
+    # Возвращаем список рекомендованных постов в виде JSON c полями exp_group и recommendations
+    return Response(exp_group=exp_group, recommendations=posts)
